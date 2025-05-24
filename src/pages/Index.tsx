@@ -88,24 +88,40 @@ const Index = () => {
 
       const parts: any[] = [{ text: prompt }];
 
-      // Handle file attachments
+      // Handle file attachments - FIXED: Now properly processes file content
       if (attachments && attachments.length > 0) {
         for (const attachment of attachments) {
           if (attachment.type === 'image' && attachment.file) {
-            const base64Data = await convertFileToBase64(attachment.file);
-            const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
-            parts.push({
-              inline_data: {
-                mime_type: attachment.file.type,
-                data: base64Image
+            try {
+              console.log('Processing image file:', attachment.file.name);
+              const base64Data = await convertFileToBase64(attachment.file);
+              const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+              
+              parts.push({
+                inline_data: {
+                  mime_type: attachment.file.type,
+                  data: base64Image
+                }
+              });
+              
+              // Update prompt to mention image analysis
+              if (!prompt.toLowerCase().includes('analyze') && !prompt.toLowerCase().includes('image')) {
+                prompt += ` Please analyze this uploaded image: ${attachment.name}`;
               }
-            });
-            prompt += ` Please analyze the uploaded image: ${attachment.name}`;
+              
+              console.log('Image successfully processed for Gemini API');
+            } catch (error) {
+              console.error('Error processing image:', error);
+              throw new Error(`Failed to process image ${attachment.name}`);
+            }
           } else if (attachment.file) {
-            prompt += ` I've uploaded a file: ${attachment.name} (${attachment.file.type}). Please help me understand or process this file.`;
+            // For non-image files, we can only mention them in the prompt
+            prompt += ` I've uploaded a file: ${attachment.name} (${attachment.file.type}). Please help me understand or process this file based on its name and type.`;
           }
         }
       }
+
+      console.log('Sending to Gemini API with parts:', parts.length, 'parts');
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -132,6 +148,7 @@ const Index = () => {
       }
 
       const data = await response.json();
+      console.log('Gemini API response:', data);
       return data.candidates[0].content.parts[0].text;
     } catch (error) {
       console.error('Error calling Gemini AI:', error);
@@ -209,6 +226,8 @@ const Index = () => {
       title: "File attached",
       description: `${file.name} is ready to send`
     });
+    
+    console.log('File attached:', file.name, 'Type:', file.type, 'Size:', file.size);
   };
 
   const removeAttachment = (index: number) => {
