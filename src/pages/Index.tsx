@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,8 @@ import {
   Camera,
   Download,
   Copy,
-  Volume2
+  Volume2,
+  X
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +32,7 @@ interface Message {
     type: 'image' | 'audio' | 'file';
     name: string;
     url: string;
+    file?: File;
   }[];
 }
 
@@ -47,6 +48,7 @@ const Index = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<{type: 'image' | 'audio' | 'file', name: string, url: string, file: File}[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +61,15 @@ const Index = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
   const generateResponse = async (userMessage: string, attachments?: any[]) => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
@@ -75,6 +86,27 @@ const Index = () => {
         prompt = `I understand you want to generate an image. Here's a detailed description for image generation: ${userMessage}. While I can't directly generate images, I can provide detailed prompts for image generation tools.`;
       }
 
+      const parts: any[] = [{ text: prompt }];
+
+      // Handle file attachments
+      if (attachments && attachments.length > 0) {
+        for (const attachment of attachments) {
+          if (attachment.type === 'image' && attachment.file) {
+            const base64Data = await convertFileToBase64(attachment.file);
+            const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+            parts.push({
+              inline_data: {
+                mime_type: attachment.file.type,
+                data: base64Image
+              }
+            });
+            prompt += ` Please analyze the uploaded image: ${attachment.name}`;
+          } else if (attachment.file) {
+            prompt += ` I've uploaded a file: ${attachment.name} (${attachment.file.type}). Please help me understand or process this file.`;
+          }
+        }
+      }
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
@@ -82,9 +114,7 @@ const Index = () => {
         },
         body: JSON.stringify({
           contents: [{
-            parts: [{
-              text: prompt
-            }]
+            parts: parts
           }],
           generationConfig: {
             temperature: 0.7,
@@ -110,21 +140,24 @@ const Index = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() && !fileInputRef.current?.files?.length) return;
+    if (!inputValue.trim() && attachedFiles.length === 0) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputValue,
-      timestamp: new Date()
+      content: inputValue || 'Shared files',
+      timestamp: new Date(),
+      attachments: attachedFiles.length > 0 ? attachedFiles : undefined
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+    const currentAttachments = [...attachedFiles];
+    setAttachedFiles([]);
     setIsLoading(true);
 
     try {
-      const response = await generateResponse(inputValue);
+      const response = await generateResponse(inputValue || 'Please analyze the uploaded files', currentAttachments);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -160,6 +193,31 @@ const Index = () => {
     const input = type === 'image' ? imageInputRef : 
                   type === 'audio' ? audioInputRef : fileInputRef;
     input.current?.click();
+  };
+
+  const processFileUpload = (file: File, type: 'image' | 'audio' | 'file') => {
+    const url = URL.createObjectURL(file);
+    const newAttachment = {
+      type,
+      name: file.name,
+      url,
+      file
+    };
+    
+    setAttachedFiles(prev => [...prev, newAttachment]);
+    toast({
+      title: "File attached",
+      description: `${file.name} is ready to send`
+    });
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachedFiles(prev => {
+      const newFiles = [...prev];
+      URL.revokeObjectURL(newFiles[index].url);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
   };
 
   const handleVoiceRecord = () => {
@@ -232,6 +290,24 @@ const Index = () => {
                       <div className="prose prose-sm max-w-none">
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       </div>
+                      
+                      {/* Display attachments */}
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {message.attachments.map((attachment, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-black/10 rounded">
+                              {attachment.type === 'image' ? <ImageIcon className="w-4 h-4" /> :
+                               attachment.type === 'audio' ? <Mic className="w-4 h-4" /> :
+                               <File className="w-4 h-4" />}
+                              <span className="text-sm truncate">{attachment.name}</span>
+                              {attachment.type === 'image' && (
+                                <img src={attachment.url} alt={attachment.name} className="max-w-32 max-h-32 object-cover rounded" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
                       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200/50">
                         <span className="text-xs opacity-70">
                           {message.timestamp.toLocaleTimeString()}
@@ -319,6 +395,30 @@ const Index = () => {
 
               <Separator className="mb-4" />
 
+              {/* Attached Files Preview */}
+              {attachedFiles.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    {attachedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        {file.type === 'image' ? <ImageIcon className="w-4 h-4" /> :
+                         file.type === 'audio' ? <Mic className="w-4 h-4" /> :
+                         <File className="w-4 h-4" />}
+                        <span className="truncate max-w-32">{file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAttachment(index)}
+                          className="h-4 w-4 p-0 hover:bg-blue-200"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 {/* File Upload Buttons */}
                 <div className="flex gap-1">
@@ -363,7 +463,7 @@ const Index = () => {
                 {/* Send Button */}
                 <Button
                   onClick={handleSendMessage}
-                  disabled={isLoading || (!inputValue.trim())}
+                  disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 >
                   <Send className="w-4 h-4" />
@@ -379,10 +479,7 @@ const Index = () => {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    toast({
-                      title: "Image uploaded",
-                      description: `${file.name} is ready for analysis`
-                    });
+                    processFileUpload(file, 'image');
                   }
                 }}
               />
@@ -394,10 +491,7 @@ const Index = () => {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    toast({
-                      title: "Audio uploaded",
-                      description: `${file.name} is ready for transcription`
-                    });
+                    processFileUpload(file, 'audio');
                   }
                 }}
               />
@@ -408,10 +502,7 @@ const Index = () => {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    toast({
-                      title: "File uploaded",
-                      description: `${file.name} is ready for processing`
-                    });
+                    processFileUpload(file, 'file');
                   }
                 }}
               />
