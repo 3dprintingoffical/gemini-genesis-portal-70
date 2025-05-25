@@ -88,31 +88,37 @@ const Index = () => {
 
       const parts: any[] = [{ text: prompt }];
 
-      // Handle file attachments - FIXED: Now properly processes file content
+      // Handle file attachments - Enhanced debugging
       if (attachments && attachments.length > 0) {
+        console.log('Processing attachments:', attachments.length);
         for (const attachment of attachments) {
+          console.log('Processing attachment:', attachment.name, 'Type:', attachment.type);
           if (attachment.type === 'image' && attachment.file) {
             try {
-              console.log('Processing image file:', attachment.file.name);
+              console.log('Converting image to base64...');
               const base64Data = await convertFileToBase64(attachment.file);
-              const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+              console.log('Base64 conversion successful, length:', base64Data.length);
               
-              parts.push({
+              const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+              console.log('Cleaned base64 length:', base64Image.length);
+              console.log('MIME type:', attachment.file.type);
+              
+              const imagePart = {
                 inline_data: {
                   mime_type: attachment.file.type,
                   data: base64Image
                 }
-              });
+              };
               
-              // Update prompt to mention image analysis
-              if (!prompt.toLowerCase().includes('analyze') && !prompt.toLowerCase().includes('image')) {
-                prompt += ` Please analyze this uploaded image: ${attachment.name}`;
-              }
+              parts.push(imagePart);
+              console.log('Added image part to request');
               
-              console.log('Image successfully processed for Gemini API');
+              // Make the prompt more explicit about image analysis
+              prompt = `Please analyze and describe this uploaded image in detail. ${prompt}`;
+              
             } catch (error) {
               console.error('Error processing image:', error);
-              throw new Error(`Failed to process image ${attachment.name}`);
+              throw new Error(`Failed to process image ${attachment.name}: ${error}`);
             }
           } else if (attachment.file) {
             // For non-image files, we can only mention them in the prompt
@@ -121,35 +127,51 @@ const Index = () => {
         }
       }
 
-      console.log('Sending to Gemini API with parts:', parts.length, 'parts');
+      console.log('Final prompt:', prompt);
+      console.log('Total parts in request:', parts.length);
+      console.log('Request parts structure:', JSON.stringify(parts, null, 2));
+
+      const requestBody = {
+        contents: [{
+          parts: parts
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+      };
+
+      console.log('Sending request to Gemini API...');
+      console.log('Request body structure:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: parts
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Gemini API Error:', errorData);
+        console.error('Gemini API Error Details:', errorData);
         throw new Error(`Failed to get response from Gemini AI: ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
-      console.log('Gemini API response:', data);
-      return data.candidates[0].content.parts[0].text;
+      console.log('Gemini API full response:', JSON.stringify(data, null, 2));
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+        return data.candidates[0].content.parts[0].text;
+      } else {
+        console.error('Unexpected response structure:', data);
+        throw new Error('Unexpected response structure from Gemini API');
+      }
     } catch (error) {
       console.error('Error calling Gemini AI:', error);
       throw error;
