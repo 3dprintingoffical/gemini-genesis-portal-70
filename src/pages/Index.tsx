@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,34 @@ const Index = () => {
     });
   };
 
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const isTextFile = (file: File): boolean => {
+    const textTypes = [
+      'text/',
+      'application/json',
+      'application/javascript',
+      'application/xml',
+      'application/xhtml+xml'
+    ];
+    
+    const textExtensions = [
+      '.html', '.htm', '.css', '.js', '.json', '.xml', '.txt', '.md', 
+      '.csv', '.svg', '.php', '.py', '.java', '.cpp', '.c', '.h',
+      '.ts', '.tsx', '.jsx', '.vue', '.scss', '.sass', '.less'
+    ];
+    
+    return textTypes.some(type => file.type.startsWith(type)) ||
+           textExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+  };
+
   const generateResponse = async (userMessage: string, attachments?: any[]) => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
     
@@ -88,11 +117,12 @@ const Index = () => {
 
       const parts: any[] = [];
 
-      // Handle file attachments - FIXED: Proper image processing
+      // Handle file attachments - ENHANCED: Support for text files
       if (attachments && attachments.length > 0) {
         console.log('Processing attachments:', attachments.length);
         for (const attachment of attachments) {
-          console.log('Processing attachment:', attachment.name, 'Type:', attachment.type);
+          console.log('Processing attachment:', attachment.name, 'Type:', attachment.type, 'MIME:', attachment.file?.type);
+          
           if (attachment.type === 'image' && attachment.file) {
             try {
               console.log('Converting image to base64...');
@@ -125,8 +155,21 @@ const Index = () => {
               console.error('Error processing image:', error);
               throw new Error(`Failed to process image ${attachment.name}: ${error}`);
             }
+          } else if (attachment.file && isTextFile(attachment.file)) {
+            try {
+              console.log('Reading text file content...');
+              const fileContent = await readFileAsText(attachment.file);
+              console.log('File content read successfully, length:', fileContent.length);
+              
+              // Add file content to the prompt
+              prompt += `\n\nHere is the content of the uploaded file "${attachment.name}" (${attachment.file.type}):\n\n\`\`\`\n${fileContent}\n\`\`\`\n\nPlease analyze this file content and ${userMessage}`;
+              
+            } catch (error) {
+              console.error('Error reading text file:', error);
+              prompt += ` I've uploaded a file: ${attachment.name} (${attachment.file.type}). Please help me understand or process this file based on its name and type.`;
+            }
           } else if (attachment.file) {
-            // For non-image files, we can only mention them in the prompt
+            // For non-image, non-text files, we can only mention them in the prompt
             prompt += ` I've uploaded a file: ${attachment.name} (${attachment.file.type}). Please help me understand or process this file based on its name and type.`;
           }
         }
