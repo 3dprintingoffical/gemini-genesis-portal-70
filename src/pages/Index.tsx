@@ -86,9 +86,9 @@ const Index = () => {
         prompt = `I understand you want to generate an image. Here's a detailed description for image generation: ${userMessage}. While I can't directly generate images, I can provide detailed prompts for image generation tools.`;
       }
 
-      const parts: any[] = [{ text: prompt }];
+      const parts: any[] = [];
 
-      // Handle file attachments - Enhanced debugging
+      // Handle file attachments - FIXED: Proper image processing
       if (attachments && attachments.length > 0) {
         console.log('Processing attachments:', attachments.length);
         for (const attachment of attachments) {
@@ -99,22 +99,27 @@ const Index = () => {
               const base64Data = await convertFileToBase64(attachment.file);
               console.log('Base64 conversion successful, length:', base64Data.length);
               
-              const base64Image = base64Data.split(',')[1]; // Remove data:image/...;base64, prefix
+              // Extract just the base64 data without the data URL prefix
+              const base64Image = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
               console.log('Cleaned base64 length:', base64Image.length);
               console.log('MIME type:', attachment.file.type);
               
-              const imagePart = {
+              // Add the image first
+              parts.push({
                 inline_data: {
                   mime_type: attachment.file.type,
                   data: base64Image
                 }
-              };
+              });
               
-              parts.push(imagePart);
               console.log('Added image part to request');
               
               // Make the prompt more explicit about image analysis
-              prompt = `Please analyze and describe this uploaded image in detail. ${prompt}`;
+              if (prompt.toLowerCase().includes('describe') || prompt.toLowerCase().includes('what')) {
+                prompt = `Please analyze and describe this uploaded image in detail. ${prompt}`;
+              } else {
+                prompt = `Please analyze this uploaded image and ${prompt}`;
+              }
               
             } catch (error) {
               console.error('Error processing image:', error);
@@ -127,9 +132,15 @@ const Index = () => {
         }
       }
 
+      // Add the text prompt after images
+      parts.push({ text: prompt });
+
       console.log('Final prompt:', prompt);
       console.log('Total parts in request:', parts.length);
-      console.log('Request parts structure:', JSON.stringify(parts, null, 2));
+      console.log('Request parts structure:', JSON.stringify(parts.map(part => ({
+        ...part,
+        inline_data: part.inline_data ? { ...part.inline_data, data: `[${part.inline_data.data.length} chars]` } : undefined
+      })), null, 2));
 
       const requestBody = {
         contents: [{
@@ -144,7 +155,6 @@ const Index = () => {
       };
 
       console.log('Sending request to Gemini API...');
-      console.log('Request body structure:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -155,7 +165,6 @@ const Index = () => {
       });
 
       console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -164,7 +173,7 @@ const Index = () => {
       }
 
       const data = await response.json();
-      console.log('Gemini API full response:', JSON.stringify(data, null, 2));
+      console.log('Gemini API response received');
       
       if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
         return data.candidates[0].content.parts[0].text;
