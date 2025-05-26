@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
 interface Message {
   id: string;
@@ -54,6 +54,25 @@ const Index = () => {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const voiceRecording = useVoiceRecording({
+    onTranscriptionComplete: (text: string) => {
+      console.log('Voice transcription completed:', text);
+      setInputValue(text);
+      toast({
+        title: "Voice recorded",
+        description: "Your message has been transcribed",
+      });
+    },
+    onError: (error: string) => {
+      console.error('Voice recording error:', error);
+      toast({
+        title: "Voice recording error",
+        description: error,
+        variant: "destructive"
+      });
+    }
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -313,14 +332,6 @@ const Index = () => {
     });
   };
 
-  const handleVoiceRecord = () => {
-    setIsRecording(!isRecording);
-    toast({
-      title: isRecording ? "Recording stopped" : "Recording started",
-      description: isRecording ? "Processing your voice message..." : "Speak now..."
-    });
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -526,8 +537,9 @@ const Index = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleVoiceRecord}
-                    className={`p-2 ${isRecording ? 'bg-red-100 text-red-600' : ''}`}
+                    onClick={voiceRecording.toggleRecording}
+                    className={`p-2 ${voiceRecording.isRecording ? 'bg-red-100 text-red-600 animate-pulse' : ''}`}
+                    disabled={!voiceRecording.isSupported}
                   >
                     <Mic className="w-4 h-4" />
                   </Button>
@@ -547,16 +559,16 @@ const Index = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask me anything... I can search the web, analyze images, process files, and more!"
+                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask me anything... I can search the web, analyze images, process files, and more!"}
                     className="pr-12 min-h-[2.5rem] resize-none"
-                    disabled={isLoading}
+                    disabled={isLoading || voiceRecording.isRecording}
                   />
                 </div>
 
                 {/* Send Button */}
                 <Button
                   onClick={handleSendMessage}
-                  disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0)}
+                  disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 >
                   <Send className="w-4 h-4" />
