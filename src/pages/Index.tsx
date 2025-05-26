@@ -19,7 +19,8 @@ import {
   Download,
   Copy,
   Volume2,
-  X
+  X,
+  Palette
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
@@ -35,6 +36,10 @@ interface Message {
     url: string;
     file?: File;
   }[];
+  generatedImage?: {
+    url: string;
+    prompt: string;
+  };
 }
 
 const Index = () => {
@@ -42,7 +47,7 @@ const Index = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant powered by Gemini. I can help you with text conversations, analyze images, transcribe audio, process files, search the web, and even generate images. What would you like to explore today?',
+      content: 'Hello! I\'m your AI assistant powered by Gemini. I can help you with text conversations, analyze images, transcribe audio, process files, search the web, and even generate images using DALL-E. What would you like to explore today?',
       timestamp: new Date()
     }
   ]);
@@ -50,6 +55,7 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<{type: 'image' | 'audio' | 'file', name: string, url: string, file: File}[]>([]);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +123,47 @@ const Index = () => {
     
     return textTypes.some(type => file.type.startsWith(type)) ||
            textExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+  };
+
+  const generateImage = async (prompt: string) => {
+    const OPENAI_API_KEY = 'your-openai-api-key-here'; // User will need to set this
+    
+    try {
+      setIsGeneratingImage(true);
+      
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard"
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`DALL-E API Error: ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.data && data.data[0] && data.data[0].url) {
+        return data.data[0].url;
+      } else {
+        throw new Error('Unexpected response structure from DALL-E API');
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      throw error;
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   const generateResponse = async (userMessage: string, attachments?: any[]) => {
@@ -252,6 +299,12 @@ const Index = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim() && attachedFiles.length === 0) return;
 
+    // Check if this is an image generation request
+    const isImageGenRequest = inputValue.toLowerCase().includes('generate image') || 
+                              inputValue.toLowerCase().includes('create image') ||
+                              inputValue.toLowerCase().includes('draw') ||
+                              inputValue.toLowerCase().includes('make image');
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -267,20 +320,43 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const response = await generateResponse(inputValue || 'Please analyze the uploaded files', currentAttachments);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: response,
-        timestamp: new Date()
-      };
+      if (isImageGenRequest) {
+        // Generate image with DALL-E
+        const imageUrl = await generateImage(inputValue);
+        
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `I've generated an image based on your prompt: "${inputValue}"`,
+          timestamp: new Date(),
+          generatedImage: {
+            url: imageUrl,
+            prompt: inputValue
+          }
+        };
 
-      setMessages(prev => [...prev, assistantMessage]);
-      toast({
-        title: "Response generated",
-        description: "AI has responded to your message",
-      });
+        setMessages(prev => [...prev, assistantMessage]);
+        toast({
+          title: "Image generated",
+          description: "Your image has been created successfully",
+        });
+      } else {
+        // Regular text response with Gemini
+        const response = await generateResponse(inputValue || 'Please analyze the uploaded files', currentAttachments);
+        
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+        toast({
+          title: "Response generated",
+          description: "AI has responded to your message",
+        });
+      }
     } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -358,9 +434,9 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Gemini AI Assistant
+                Gemini AI Assistant + DALL-E
               </h1>
-              <p className="text-sm text-gray-600">Multimodal AI powered by Google Gemini</p>
+              <p className="text-sm text-gray-600">Multimodal AI powered by Google Gemini & OpenAI DALL-E</p>
             </div>
             <div className="ml-auto flex gap-2">
               <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -394,6 +470,18 @@ const Index = () => {
                       <div className="prose prose-sm max-w-none">
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       </div>
+                      
+                      {/* Display generated images */}
+                      {message.generatedImage && (
+                        <div className="mt-3">
+                          <img 
+                            src={message.generatedImage.url} 
+                            alt={message.generatedImage.prompt}
+                            className="max-w-full rounded-lg shadow-md"
+                          />
+                          <p className="text-xs text-gray-600 mt-2">Generated from: "{message.generatedImage.prompt}"</p>
+                        </div>
+                      )}
                       
                       {/* Display attachments */}
                       {message.attachments && message.attachments.length > 0 && (
@@ -447,7 +535,7 @@ const Index = () => {
                 </div>
               ))}
               
-              {isLoading && (
+              {(isLoading || isGeneratingImage) && (
                 <div className="flex gap-4 justify-start">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-white" />
@@ -460,7 +548,9 @@ const Index = () => {
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
-                        <span className="text-sm text-gray-600">AI is thinking...</span>
+                        <span className="text-sm text-gray-600">
+                          {isGeneratingImage ? 'Generating image...' : 'AI is thinking...'}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
@@ -491,9 +581,9 @@ const Index = () => {
                   <File className="w-3 h-3 mr-1" />
                   File Processing
                 </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Camera className="w-3 h-3 mr-1" />
-                  Image Generation
+                <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700">
+                  <Palette className="w-3 h-3 mr-1" />
+                  DALL-E Generation
                 </Badge>
               </div>
 
@@ -551,6 +641,14 @@ const Index = () => {
                   >
                     <File className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100"
+                    title="Use keywords like 'generate image' or 'create image' in your message"
+                  >
+                    <Palette className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 {/* Text Input */}
@@ -559,16 +657,16 @@ const Index = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask me anything... I can search the web, analyze images, process files, and more!"}
+                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask me anything or type 'generate image of...' to create images with DALL-E!"}
                     className="pr-12 min-h-[2.5rem] resize-none"
-                    disabled={isLoading || voiceRecording.isRecording}
+                    disabled={isLoading || voiceRecording.isRecording || isGeneratingImage}
                   />
                 </div>
 
                 {/* Send Button */}
                 <Button
                   onClick={handleSendMessage}
-                  disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording}
+                  disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording || isGeneratingImage}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 >
                   <Send className="w-4 h-4" />
