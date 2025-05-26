@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,7 +127,7 @@ const Index = () => {
   };
 
   const generateImage = async (prompt: string) => {
-    const OPENAI_API_KEY = 'your-openai-api-key-here'; // User will need to set this
+    const OPENAI_API_KEY = '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';
     
     try {
       setIsGeneratingImage(true);
