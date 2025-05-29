@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database } from 'lucide-react';
+import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
@@ -32,7 +32,7 @@ const Index = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: '1',
     type: 'assistant',
-    content: 'Hello! I\'m AKM BOT, your advanced AI assistant developed by AKM and powered by Gemini AI. I\'m equipped with comprehensive capabilities to handle virtually any task:\n\n🎨 **AI IMAGE GENERATION**\n• Create stunning images from text descriptions\n• Generate artwork, designs, and visual content\n• Multiple art styles and formats supported\n\n📄 **UNIVERSAL FILE ANALYSIS**\n• Documents (PDF, DOC, DOCX, TXT, MD, RTF)\n• Spreadsheets (XLS, XLSX, CSV, ODS)\n• Images (JPG, PNG, GIF, SVG, WEBP, BMP)\n• Audio files (MP3, WAV, OGG, FLAC, AAC)\n• Video files (MP4, AVI, MOV, WMV, MKV)\n• Code files (JS, TS, PY, JAVA, CPP, HTML, CSS)\n• Archives (ZIP, RAR, 7Z, TAR, GZ)\n• Data files (JSON, XML, SQL, YAML, CSV)\n\n🎤 **VOICE INTERACTION**\n• Voice-to-text transcription\n• Natural speech processing\n• Hands-free communication\n\n🔍 **INTELLIGENT SEARCH**\n• Real-time information retrieval\n• Context-aware responses\n• Latest data and insights\n\n💬 **ADVANCED CHAT**\n• Natural language understanding\n• Context retention\n• Multi-turn conversations\n\n**Developed by AKM** - Bringing you cutting-edge AI technology for all your digital needs. Upload any file, ask questions, or request image generation - I\'m here to help!',
+    content: 'Hello! I\'m AKM BOT, your advanced AI assistant developed by AKM and powered by Gemini AI. I\'m equipped with comprehensive capabilities to handle virtually any task:\n\n🎨 AI IMAGE GENERATION\n• Create stunning images from text descriptions\n• Generate artwork, designs, and visual content\n• Multiple art styles and formats supported\n\n📄 UNIVERSAL FILE ANALYSIS\n• Documents (PDF, DOC, DOCX, TXT, MD, RTF)\n• Spreadsheets (XLS, XLSX, CSV, ODS)\n• Images (JPG, PNG, GIF, SVG, WEBP, BMP)\n• Audio files (MP3, WAV, OGG, FLAC, AAC)\n• Video files (MP4, AVI, MOV, WMV, MKV)\n• Code files (JS, TS, PY, JAVA, CPP, HTML, CSS)\n• Archives (ZIP, RAR, 7Z, TAR, GZ)\n• Data files (JSON, XML, SQL, YAML, CSV)\n\n🎤 VOICE INTERACTION\n• Voice-to-text transcription\n• Natural speech processing\n• Hands-free communication\n\n🔍 INTELLIGENT SEARCH\n• Real-time information retrieval\n• Context-aware responses\n• Latest data and insights\n\n💬 ADVANCED CHAT\n• Natural language understanding\n• Context retention\n• Multi-turn conversations\n\nDeveloped by AKM - Bringing you cutting-edge AI technology for all your digital needs. Upload any file, ask questions, or request image generation - I\'m here to help!',
     timestamp: new Date()
   }]);
   const [inputValue, setInputValue] = useState('');
@@ -162,12 +162,7 @@ const Index = () => {
     const lastModified = new Date(file.lastModified);
     let sizeStr = '';
     if (size < 1024) sizeStr = `${size} bytes`;else if (size < 1024 * 1024) sizeStr = `${(size / 1024).toFixed(1)} KB`;else if (size < 1024 * 1024 * 1024) sizeStr = `${(size / 1024 / 1024).toFixed(1)} MB`;else sizeStr = `${(size / 1024 / 1024 / 1024).toFixed(1)} GB`;
-    return `📊 **File Analysis:**
-• **Name:** ${file.name}
-• **Type:** ${type}
-• **Extension:** .${extension}
-• **Size:** ${sizeStr}
-• **Last Modified:** ${lastModified.toLocaleString()}`;
+    return `📊 File Analysis:\n• Name: ${file.name}\n• Type: ${type}\n• Extension: .${extension}\n• Size: ${sizeStr}\n• Last Modified: ${lastModified.toLocaleString()}`;
   };
   const generateImageWithGemini = async (prompt: string) => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
@@ -335,17 +330,17 @@ const Index = () => {
               const lines = fileContent.split('\n').length;
               const words = fileContent.split(/\s+/).length;
               const chars = fileContent.length;
-              prompt += `\n\n📝 **Content Analysis:**\n• **Lines:** ${lines}\n• **Words:** ${words}\n• **Characters:** ${chars}\n\n**File Content:**\n\`\`\`\n${fileContent.length > 10000 ? fileContent.substring(0, 10000) + '\n... (content truncated)' : fileContent}\n\`\`\`\n\nPlease analyze this file content comprehensively. If it's code, explain its functionality. If it's data, analyze patterns. If it's documentation, summarize key points.`;
+              prompt += `\n\n📝 Content Analysis:\n• Lines: ${lines}\n• Words: ${words}\n• Characters: ${chars}\n\nFile Content:\n\`\`\`\n${fileContent.length > 10000 ? fileContent.substring(0, 10000) + '\n... (content truncated)' : fileContent}\n\`\`\`\n\nPlease analyze this file content comprehensively. If it's code, explain its functionality. If it's data, analyze patterns. If it's documentation, summarize key points.`;
             } catch (error) {
               console.error('Error reading text file:', error);
               prompt += `\n\n⚠️ Could not read text content from ${attachment.name}. Please provide analysis based on file metadata.`;
             }
           } else if (attachment.file && isBinaryFile(attachment.file)) {
             // For binary files, provide detailed metadata analysis
-            prompt += `\n\n🔍 **Binary File Detected:** ${attachment.name}\nThis appears to be a binary file format. Based on the file extension and MIME type, please provide:\n• Expected file structure and format\n• Common use cases and applications\n• Possible content analysis approaches\n• Recommendations for further processing`;
+            prompt += `\n\n🔍 Binary File Detected: ${attachment.name}\nThis appears to be a binary file format. Based on the file extension and MIME type, please provide:\n• Expected file structure and format\n• Common use cases and applications\n• Possible content analysis approaches\n• Recommendations for further processing`;
           } else if (attachment.file) {
             // For any other file types
-            prompt += `\n\n📎 **File Upload:** ${attachment.name}\n• **MIME Type:** ${attachment.file.type}\n• **Category:** ${attachment.file.type.startsWith('audio/') ? 'Audio' : attachment.file.type.startsWith('video/') ? 'Video' : attachment.file.type.startsWith('application/') ? 'Application' : 'Other'}\n\nPlease analyze this file based on its type and provide relevant insights about its likely content and structure.`;
+            prompt += `\n\n📎 File Upload: ${attachment.name}\n• MIME Type: ${attachment.file.type}\n• Category: ${attachment.file.type.startsWith('audio/') ? 'Audio' : attachment.file.type.startsWith('video/') ? 'Video' : attachment.file.type.startsWith('application/') ? 'Application' : 'Other'}\n\nPlease analyze this file based on its type and provide relevant insights about its likely content and structure.`;
           }
         }
       }
@@ -521,228 +516,297 @@ const Index = () => {
       handleSendMessage();
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">AKM BOT</h1>
-              <p className="text-sm text-gray-600">Advanced AI Assistant - Developed by AKM | File Analysis • Image Generation • Voice Interaction</p>
-            </div>
-            <div className="ml-auto flex gap-2">
-              <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                Powered by AKM
-              </Badge>
-              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                All Features Active
-              </Badge>
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Main Chat Area - Dark Theme */}
+      <div className="flex flex-col h-screen">
+        {/* Header */}
+        <div className="border-b border-gray-700 bg-gray-800/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent font-semibold">AKM BOT</h1>
+                  <p className="text-xs text-gray-400">Gemini Genesis Portal</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
+                  Online
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Chat Area */}
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="flex flex-col h-[calc(100vh-200px)]">
-          {/* Messages */}
-          <ScrollArea className="flex-1 mb-6">
-            <div className="space-y-6">
-              {messages.map(message => <div key={message.id} className={`flex gap-4 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {message.type === 'assistant' && <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>}
-                  
-                  <Card className={`max-w-[80%] ${message.type === 'user' ? 'bg-blue-500 text-white' : 'bg-white shadow-md'}`}>
-                    <CardContent className="p-4">
-                      <div className="prose prose-sm max-w-none">
-                        <p className="whitespace-pre-wrap">{message.content}</p>
+        {/* Messages Area */}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="max-w-4xl mx-auto px-4 py-6">
+              <div className="space-y-6">
+                {messages.map((message, index) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex gap-4 animate-fade-in ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {message.type === 'assistant' && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    
+                    <div className={`max-w-[80%] ${message.type === 'user' ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-gray-800/50 border border-gray-700/50'} rounded-xl p-4 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-lg`}>
+                      <div className="prose prose-sm max-w-none text-gray-100">
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                       </div>
                       
                       {/* Display generated images */}
-                      {message.generatedImage && <div className="mt-3">
-                          <img src={message.generatedImage.url} alt={message.generatedImage.prompt} className="max-w-full rounded-lg shadow-md" />
-                          <p className="text-xs text-gray-600 mt-2">Generated by AKM BOT from: "{message.generatedImage.prompt}"</p>
-                        </div>}
+                      {message.generatedImage && (
+                        <div className="mt-4 animate-scale-in">
+                          <img 
+                            src={message.generatedImage.url} 
+                            alt={message.generatedImage.prompt} 
+                            className="max-w-full rounded-lg shadow-xl border border-gray-600" 
+                          />
+                          <p className="text-xs text-gray-400 mt-2">Generated from: "{message.generatedImage.prompt}"</p>
+                        </div>
+                      )}
                       
                       {/* Enhanced attachments display */}
-                      {message.attachments && message.attachments.length > 0 && <div className="mt-3 space-y-2">
-                          {message.attachments.map((attachment, index) => <div key={index} className="flex items-center gap-2 p-3 bg-black/10 rounded-lg">
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {message.attachments.map((attachment, index) => (
+                            <div key={index} className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg border border-gray-600/30">
                               {getFileIcon(attachment.name, attachment.file?.type || '')}
                               <div className="flex-1 min-w-0">
-                                <span className="text-sm font-medium truncate block">{attachment.name}</span>
-                                {attachment.fileSize && <span className="text-xs opacity-70">
-                                    {attachment.fileSize < 1024 ? `${attachment.fileSize} bytes` : attachment.fileSize < 1024 * 1024 ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : `${(attachment.fileSize / 1024 / 1024).toFixed(1)} MB`}
-                                  </span>}
+                                <span className="text-sm font-medium truncate block text-gray-200">{attachment.name}</span>
+                                {attachment.fileSize && (
+                                  <span className="text-xs text-gray-400">
+                                    {attachment.fileSize < 1024 ? `${attachment.fileSize} bytes` : 
+                                     attachment.fileSize < 1024 * 1024 ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : 
+                                     `${(attachment.fileSize / 1024 / 1024).toFixed(1)} MB`}
+                                  </span>
+                                )}
                               </div>
-                              {attachment.type === 'image' && <img src={attachment.url} alt={attachment.name} className="max-w-20 max-h-20 object-cover rounded" />}
-                            </div>)}
-                        </div>}
+                              {attachment.type === 'image' && (
+                                <img src={attachment.url} alt={attachment.name} className="max-w-16 max-h-16 object-cover rounded border border-gray-600" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200/50">
-                        <span className="text-xs opacity-70">
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-600/30">
+                        <span className="text-xs text-gray-400">
                           {message.timestamp.toLocaleTimeString()}
                         </span>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(message.content)} className="h-6 w-6 p-0 opacity-70 hover:opacity-100">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(message.content)} 
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                          >
                             <Copy className="w-3 h-3" />
                           </Button>
-                          {message.type === 'assistant' && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 opacity-70 hover:opacity-100">
+                          {message.type === 'assistant' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                            >
                               <Volume2 className="w-3 h-3" />
-                            </Button>}
+                            </Button>
+                          )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
 
-                  {message.type === 'user' && <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-white" />
-                    </div>}
-                </div>)}
-              
-              {(isLoading || isGeneratingImage) && <div className="flex gap-4 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-white" />
+                    {message.type === 'user' && (
+                      <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                   </div>
-                  <Card className="bg-white shadow-md">
-                    <CardContent className="p-4">
+                ))}
+                
+                {(isLoading || isGeneratingImage) && (
+                  <div className="flex gap-4 justify-start animate-fade-in">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 backdrop-blur-sm">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{
-                        animationDelay: '0.1s'
-                      }}></div>
-                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{
-                        animationDelay: '0.2s'
-                      }}></div>
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
-                        <span className="text-sm text-gray-600">
-                          {isGeneratingImage ? 'AKM BOT is generating your image...' : 'AKM BOT is analyzing your request...'}
+                        <span className="text-sm text-gray-400">
+                          {isGeneratingImage ? 'Generating your image...' : 'Thinking...'}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>}
-            </div>
-            <div ref={messagesEndRef} />
-          </ScrollArea>
-
-          {/* Input Area */}
-          <Card className="bg-white/90 backdrop-blur-sm border-2 shadow-lg">
-            <CardContent className="p-4">
-              {/* Enhanced Feature Pills */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200">
-                  <Palette className="w-3 h-3 mr-1" />
-                  AI Image Generation
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <FileText className="w-3 h-3 mr-1" />
-                  PDF & Documents
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <FileSpreadsheet className="w-3 h-3 mr-1" />
-                  Spreadsheets
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Code className="w-3 h-3 mr-1" />
-                  Source Code
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <FileImage className="w-3 h-3 mr-1" />
-                  Images & Media
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Mic className="w-3 h-3 mr-1" />
-                  Voice Input
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Archive className="w-3 h-3 mr-1" />
-                  Archives
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Database className="w-3 h-3 mr-1" />
-                  Data Files
-                </Badge>
-              </div>
-
-              <Separator className="mb-4" />
-
-              {/* Enhanced Attached Files Preview */}
-              {attachedFiles.length > 0 && <div className="mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {attachedFiles.map((file, index) => <div key={index} className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-2 rounded-lg text-sm">
-                        {getFileIcon(file.name, file.file?.type || '')}
-                        <div className="flex flex-col">
-                          <span className="truncate max-w-32 font-medium">{file.name}</span>
-                          {file.fileSize && <span className="text-xs opacity-70">
-                              {file.fileSize < 1024 ? `${file.fileSize} bytes` : file.fileSize < 1024 * 1024 ? `${(file.fileSize / 1024).toFixed(1)} KB` : `${(file.fileSize / 1024 / 1024).toFixed(1)} MB`}
-                            </span>}
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeAttachment(index)} className="h-4 w-4 p-0 hover:bg-purple-200">
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>)}
+                    </div>
                   </div>
-                </div>}
+                )}
+              </div>
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
 
-              <div className="flex gap-2">
-                {/* File Upload Buttons */}
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" onClick={() => handleFileUpload('image')} className="p-2" title="Upload Images">
-                    <ImageIcon className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={voiceRecording.toggleRecording} className={`p-2 ${voiceRecording.isRecording ? 'bg-red-100 text-red-600 animate-pulse' : ''}`} disabled={!voiceRecording.isSupported} title="Voice Input">
-                    <Mic className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleFileUpload('file')} className="p-2 bg-green-50 text-green-600 hover:bg-green-100" title="Upload ANY File Type">
-                    <File className="w-4 h-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100" title="Generate Images with AI">
-                    <Palette className="w-4 h-4" />
-                  </Button>
+        {/* Input Area - Modern Dark Design */}
+        <div className="border-t border-gray-700 bg-gray-800/50 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            {/* Enhanced Attached Files Preview */}
+            {attachedFiles.length > 0 && (
+              <div className="mb-4">
+                <div className="flex flex-wrap gap-2">
+                  {attachedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-gray-700/50 text-gray-300 px-3 py-2 rounded-lg text-sm border border-gray-600/50">
+                      {getFileIcon(file.name, file.file?.type || '')}
+                      <div className="flex flex-col">
+                        <span className="truncate max-w-32 font-medium">{file.name}</span>
+                        {file.fileSize && (
+                          <span className="text-xs text-gray-400">
+                            {file.fileSize < 1024 ? `${file.fileSize} bytes` : 
+                             file.fileSize < 1024 * 1024 ? `${(file.fileSize / 1024).toFixed(1)} KB` : 
+                             `${(file.fileSize / 1024 / 1024).toFixed(1)} MB`}
+                          </span>
+                        )}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeAttachment(index)} 
+                        className="h-4 w-4 p-0 text-gray-400 hover:text-red-400 hover:bg-red-900/20"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                {/* Text Input */}
-                <div className="flex-1 relative">
-                  <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder={voiceRecording.isRecording ? "AKM BOT is listening..." : "Ask anything, upload files, or request image generation - AKM BOT can handle it all!"} className="pr-12 min-h-[2.5rem] resize-none" disabled={isLoading || voiceRecording.isRecording || isGeneratingImage} />
-                </div>
-
-                {/* Send Button */}
-                <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim() && attachedFiles.length === 0 || voiceRecording.isRecording || isGeneratingImage} className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
-                  <Send className="w-4 h-4" />
+            <div className="flex gap-3 items-end">
+              {/* Action Buttons */}
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-all duration-200" 
+                  title="Add attachment"
+                >
+                  <Plus className="w-4 h-4" />
                 </Button>
               </div>
 
-              {/* Hidden File Inputs - Enhanced to accept ALL file types */}
-              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+              {/* Main Input */}
+              <div className="flex-1 relative">
+                <div className="relative flex items-center">
+                  <Input
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask anything..."}
+                    className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 pr-20 min-h-[48px] rounded-xl focus:border-purple-500/50 focus:ring-purple-500/20 transition-all duration-200"
+                    disabled={isLoading || voiceRecording.isRecording || isGeneratingImage}
+                  />
+                  
+                  {/* Inline Action Buttons */}
+                  <div className="absolute right-2 flex gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleFileUpload('image')} 
+                      className="p-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-all duration-200" 
+                      title="Upload Images"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={voiceRecording.toggleRecording} 
+                      className={`p-1.5 transition-all duration-200 ${
+                        voiceRecording.isRecording 
+                          ? 'text-red-400 animate-pulse' 
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-600/50'
+                      }`} 
+                      disabled={!voiceRecording.isSupported} 
+                      title="Voice Input"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleFileUpload('file')} 
+                      className="p-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition-all duration-200" 
+                      title="Upload File"
+                    >
+                      <File className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Send Button */}
+              <Button 
+                onClick={handleSendMessage} 
+                disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording || isGeneratingImage} 
+                className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white p-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+                <Palette className="w-3 h-3 mr-1" />
+                Create an image
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+                <Search className="w-3 h-3 mr-1" />
+                Search the web
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+                <Code className="w-3 h-3 mr-1" />
+                Write or code
+              </Badge>
+            </div>
+
+            {/* Hidden File Inputs */}
+            <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
                 processFileUpload(file, 'image');
               }
             }} />
-              <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={e => {
+            <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
                 processFileUpload(file, 'audio');
               }
             }} />
-              <input ref={fileInputRef} type="file" accept="*/*" className="hidden" onChange={e => {
+            <input ref={fileInputRef} type="file" accept="*/*" className="hidden" onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
                 processFileUpload(file, 'file');
               }
             }} />
-            </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Index;
