@@ -150,14 +150,14 @@ const Index = () => {
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1024,
-          responseMimeType: "application/json",
           responseModalities: ["TEXT", "IMAGE"]
         }
       };
       
       console.log('Request body:', requestBody);
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+      // Use the correct model for image generation
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -192,11 +192,11 @@ const Index = () => {
         const parts = data.candidates[0].content.parts;
         
         for (const part of parts) {
-          if (part.inlineData && part.inlineData.data) {
+          if (part.inline_data && part.inline_data.data) {
             console.log('Found image data in response');
             // Create a data URL from the base64 image data
-            const mimeType = part.inlineData.mimeType || 'image/png';
-            const imageUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+            const mimeType = part.inline_data.mime_type || 'image/png';
+            const imageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
             console.log('Image URL created:', imageUrl.substring(0, 100) + '...');
             return imageUrl;
           }
