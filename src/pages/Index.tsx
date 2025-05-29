@@ -131,6 +131,25 @@ const Index = () => {
     
     try {
       setIsGeneratingImage(true);
+      console.log('Generating image with prompt:', prompt);
+      
+      // Clean and enhance the prompt for better DALL-E results
+      const enhancedPrompt = prompt.toLowerCase().includes('generate image') 
+        ? prompt.replace(/generate image of?/i, '').trim()
+        : prompt;
+      
+      console.log('Enhanced prompt:', enhancedPrompt);
+      
+      const requestBody = {
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        response_format: "url"
+      };
+      
+      console.log('Request body:', requestBody);
       
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -138,25 +157,36 @@ const Index = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "standard"
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`DALL-E API Error: ${errorData.error?.message || 'Unknown error'}`);
+        let errorMessage = `DALL-E API Error (${response.status})`;
+        try {
+          const errorData = JSON.parse(responseText);
+          console.log('Error data:', errorData);
+          errorMessage = errorData.error?.message || errorData.error?.type || 'Unknown error';
+        } catch (e) {
+          console.log('Could not parse error response');
+          errorMessage = `HTTP ${response.status}: ${responseText}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
+      console.log('Success response:', data);
       
       if (data.data && data.data[0] && data.data[0].url) {
+        console.log('Image URL:', data.data[0].url);
         return data.data[0].url;
       } else {
+        console.error('Unexpected response structure:', data);
         throw new Error('Unexpected response structure from DALL-E API');
       }
     } catch (error) {
@@ -304,7 +334,12 @@ const Index = () => {
     const isImageGenRequest = inputValue.toLowerCase().includes('generate image') || 
                               inputValue.toLowerCase().includes('create image') ||
                               inputValue.toLowerCase().includes('draw') ||
-                              inputValue.toLowerCase().includes('make image');
+                              inputValue.toLowerCase().includes('make image') ||
+                              inputValue.toLowerCase().includes('paint') ||
+                              inputValue.toLowerCase().includes('design');
+
+    console.log('Input value:', inputValue);
+    console.log('Is image generation request:', isImageGenRequest);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -322,8 +357,10 @@ const Index = () => {
 
     try {
       if (isImageGenRequest) {
+        console.log('Starting image generation...');
         // Generate image with DALL-E
         const imageUrl = await generateImage(inputValue);
+        console.log('Image generated successfully:', imageUrl);
         
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -359,16 +396,17 @@ const Index = () => {
         });
       }
     } catch (error) {
+      console.error('Error in handleSendMessage:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: 'I apologize, but I encountered an error while processing your request. Please try again.',
+        content: `I apologize, but I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
       toast({
         title: "Error",
-        description: "Failed to get AI response. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to process request. Please try again.",
         variant: "destructive"
       });
     } finally {
