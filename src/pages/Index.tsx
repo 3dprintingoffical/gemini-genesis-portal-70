@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +47,7 @@ const Index = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant powered by Gemini. I can help you with text conversations, analyze images, transcribe audio, process files, search the web, and even generate images using DALL-E. What would you like to explore today?',
+      content: 'Hello! I\'m your AI assistant powered by Gemini. I can help you with text conversations, analyze images, transcribe audio, process files, search the web, and even generate images using Gemini\'s free image generation. What would you like to explore today?',
       timestamp: new Date()
     }
   ]);
@@ -126,14 +125,14 @@ const Index = () => {
            textExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
   };
 
-  const generateImage = async (prompt: string) => {
-    const OPENAI_API_KEY = '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';
+  const generateImageWithGemini = async (prompt: string) => {
+    const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
     
     try {
       setIsGeneratingImage(true);
-      console.log('Generating image with prompt:', prompt);
+      console.log('Generating image with Gemini API, prompt:', prompt);
       
-      // Clean and enhance the prompt for better DALL-E results
+      // Clean and enhance the prompt for better results
       const enhancedPrompt = prompt.toLowerCase().includes('generate image') 
         ? prompt.replace(/generate image of?/i, '').trim()
         : prompt;
@@ -141,21 +140,27 @@ const Index = () => {
       console.log('Enhanced prompt:', enhancedPrompt);
       
       const requestBody = {
-        model: "dall-e-3",
-        prompt: enhancedPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        response_format: "url"
+        contents: [{
+          parts: [{
+            text: `Generate an image: ${enhancedPrompt}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+          responseMimeType: "application/json",
+          responseModalities: ["TEXT", "IMAGE"]
+        }
       };
       
       console.log('Request body:', requestBody);
       
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify(requestBody)
       });
@@ -167,11 +172,11 @@ const Index = () => {
       console.log('Raw response:', responseText);
 
       if (!response.ok) {
-        let errorMessage = `DALL-E API Error (${response.status})`;
+        let errorMessage = `Gemini API Error (${response.status})`;
         try {
           const errorData = JSON.parse(responseText);
           console.log('Error data:', errorData);
-          errorMessage = errorData.error?.message || errorData.error?.type || 'Unknown error';
+          errorMessage = errorData.error?.message || errorData.error?.code || 'Unknown error';
         } catch (e) {
           console.log('Could not parse error response');
           errorMessage = `HTTP ${response.status}: ${responseText}`;
@@ -182,15 +187,30 @@ const Index = () => {
       const data = JSON.parse(responseText);
       console.log('Success response:', data);
       
-      if (data.data && data.data[0] && data.data[0].url) {
-        console.log('Image URL:', data.data[0].url);
-        return data.data[0].url;
+      // Look for image data in the response
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+        const parts = data.candidates[0].content.parts;
+        
+        for (const part of parts) {
+          if (part.inlineData && part.inlineData.data) {
+            console.log('Found image data in response');
+            // Create a data URL from the base64 image data
+            const mimeType = part.inlineData.mimeType || 'image/png';
+            const imageUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+            console.log('Image URL created:', imageUrl.substring(0, 100) + '...');
+            return imageUrl;
+          }
+        }
+        
+        // If no image found, throw an error
+        console.error('No image data found in response parts:', parts);
+        throw new Error('No image data found in Gemini response. Image generation may not be available for this model.');
       } else {
         console.error('Unexpected response structure:', data);
-        throw new Error('Unexpected response structure from DALL-E API');
+        throw new Error('Unexpected response structure from Gemini API');
       }
     } catch (error) {
-      console.error('Error generating image:', error);
+      console.error('Error generating image with Gemini:', error);
       throw error;
     } finally {
       setIsGeneratingImage(false);
@@ -357,10 +377,10 @@ const Index = () => {
 
     try {
       if (isImageGenRequest) {
-        console.log('Starting image generation...');
-        // Generate image with DALL-E
-        const imageUrl = await generateImage(inputValue);
-        console.log('Image generated successfully:', imageUrl);
+        console.log('Starting image generation with Gemini...');
+        // Generate image with Gemini
+        const imageUrl = await generateImageWithGemini(inputValue);
+        console.log('Image generated successfully:', imageUrl.substring(0, 100) + '...');
         
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -376,7 +396,7 @@ const Index = () => {
         setMessages(prev => [...prev, assistantMessage]);
         toast({
           title: "Image generated",
-          description: "Your image has been created successfully",
+          description: "Your image has been created successfully with Gemini",
         });
       } else {
         // Regular text response with Gemini
@@ -473,9 +493,9 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Gemini AI Assistant + DALL-E
+                Gemini AI Assistant
               </h1>
-              <p className="text-sm text-gray-600">Multimodal AI powered by Google Gemini & OpenAI DALL-E</p>
+              <p className="text-sm text-gray-600">Multimodal AI with free image generation powered by Google Gemini</p>
             </div>
             <div className="ml-auto flex gap-2">
               <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -588,7 +608,7 @@ const Index = () => {
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                         <span className="text-sm text-gray-600">
-                          {isGeneratingImage ? 'Generating image...' : 'AI is thinking...'}
+                          {isGeneratingImage ? 'Generating image with Gemini...' : 'AI is thinking...'}
                         </span>
                       </div>
                     </CardContent>
@@ -620,9 +640,9 @@ const Index = () => {
                   <File className="w-3 h-3 mr-1" />
                   File Processing
                 </Badge>
-                <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700">
+                <Badge variant="outline" className="text-xs bg-green-100 text-green-700">
                   <Palette className="w-3 h-3 mr-1" />
-                  DALL-E Generation
+                  Free Gemini Generation
                 </Badge>
               </div>
 
@@ -683,7 +703,7 @@ const Index = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100"
+                    className="p-2 bg-green-50 text-green-600 hover:bg-green-100"
                     title="Use keywords like 'generate image' or 'create image' in your message"
                   >
                     <Palette className="w-4 h-4" />
@@ -696,7 +716,7 @@ const Index = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask me anything or type 'generate image of...' to create images with DALL-E!"}
+                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask me anything or type 'generate image of...' to create images with Gemini!"}
                     className="pr-12 min-h-[2.5rem] resize-none"
                     disabled={isLoading || voiceRecording.isRecording || isGeneratingImage}
                   />
