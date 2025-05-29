@@ -347,6 +347,20 @@ const Index = () => {
     }
   };
 
+  const filterFormattingFromText = (text: string): string => {
+    return text
+      // Remove markdown-style asterisks for bold/emphasis
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      // Remove bullet points with asterisks
+      .replace(/^\s*\*\s+/gm, '')
+      // Remove multiple asterisks used as dividers
+      .replace(/\*{3,}/g, '')
+      // Clean up extra whitespace that might result from filtering
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim();
+  };
+
   const generateResponse = async (userMessage: string, attachments?: any[]) => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
     
@@ -482,7 +496,10 @@ Please analyze this file based on its type and provide relevant insights about i
       console.log('Gemini API response received');
       
       if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
-        return data.candidates[0].content.parts[0].text;
+        const rawText = data.candidates[0].content.parts[0].text;
+        // Apply filtering to remove asterisks and formatting
+        const filteredText = filterFormattingFromText(rawText);
+        return filteredText;
       } else {
         console.error('Unexpected response structure:', data);
         throw new Error('Unexpected response structure from Gemini API');
