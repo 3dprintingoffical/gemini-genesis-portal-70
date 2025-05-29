@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -26,11 +27,12 @@ interface Message {
     prompt: string;
   };
 }
+
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: '1',
     type: 'assistant',
-    content: 'Hello! I\'m your AI assistant powered by Gemini. I can analyze virtually any file type including:\n\n📄 Documents (PDF, DOC, TXT, MD)\n📊 Spreadsheets (XLS, CSV)\n🖼️ Images (JPG, PNG, GIF, SVG)\n🎵 Audio files (MP3, WAV)\n🎬 Video files (MP4, AVI)\n💻 Code files (JS, PY, HTML, CSS)\n📦 Archives (ZIP, RAR)\n🗄️ Data files (JSON, XML, SQL)\n\nJust upload any file and I\'ll analyze its content, structure, and provide insights!',
+    content: 'Hello! I\'m AKM BOT, your advanced AI assistant developed by AKM and powered by Gemini AI. I\'m equipped with comprehensive capabilities to handle virtually any task:\n\n🎨 **AI IMAGE GENERATION**\n• Create stunning images from text descriptions\n• Generate artwork, designs, and visual content\n• Multiple art styles and formats supported\n\n📄 **UNIVERSAL FILE ANALYSIS**\n• Documents (PDF, DOC, DOCX, TXT, MD, RTF)\n• Spreadsheets (XLS, XLSX, CSV, ODS)\n• Images (JPG, PNG, GIF, SVG, WEBP, BMP)\n• Audio files (MP3, WAV, OGG, FLAC, AAC)\n• Video files (MP4, AVI, MOV, WMV, MKV)\n• Code files (JS, TS, PY, JAVA, CPP, HTML, CSS)\n• Archives (ZIP, RAR, 7Z, TAR, GZ)\n• Data files (JSON, XML, SQL, YAML, CSV)\n\n🎤 **VOICE INTERACTION**\n• Voice-to-text transcription\n• Natural speech processing\n• Hands-free communication\n\n🔍 **INTELLIGENT SEARCH**\n• Real-time information retrieval\n• Context-aware responses\n• Latest data and insights\n\n💬 **ADVANCED CHAT**\n• Natural language understanding\n• Context retention\n• Multi-turn conversations\n\n**Developed by AKM** - Bringing you cutting-edge AI technology for all your digital needs. Upload any file, ask questions, or request image generation - I\'m here to help!',
     timestamp: new Date()
   }]);
   const [inputValue, setInputValue] = useState('');
@@ -276,6 +278,16 @@ const Index = () => {
     try {
       let prompt = userMessage;
 
+      // Handle developer/creator questions
+      if (userMessage.toLowerCase().includes('developer') || 
+          userMessage.toLowerCase().includes('creator') || 
+          userMessage.toLowerCase().includes('who made') ||
+          userMessage.toLowerCase().includes('who created') ||
+          userMessage.toLowerCase().includes('who developed') ||
+          userMessage.toLowerCase().includes('who built')) {
+        prompt = `I was developed by AKM, a talented developer who created me to be your comprehensive AI assistant. AKM designed me with advanced capabilities including file analysis, image generation, voice interaction, and intelligent conversation. ${userMessage}`;
+      }
+
       // Enhanced prompt based on user intent
       if (userMessage.toLowerCase().includes('search') || userMessage.toLowerCase().includes('latest')) {
         prompt = `Please search for recent information about: ${userMessage}. Provide current, accurate details.`;
@@ -283,7 +295,6 @@ const Index = () => {
       if (userMessage.toLowerCase().includes('generate image') || userMessage.toLowerCase().includes('create image')) {
         prompt = `I understand you want to generate an image. Here's a detailed description for image generation: ${userMessage}. While I can't directly generate images, I can provide detailed prompts for image generation tools.`;
       }
-      const parts: any[] = [];
 
       // Enhanced file processing for ALL file types
       if (attachments && attachments.length > 0) {
@@ -524,17 +535,21 @@ Please analyze this file based on its type and provide relevant insights about i
       <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-bold">AKM BOT</h1>
-              <p className="text-sm text-gray-600">Analyze ANY file type with AI - Documents, Images, Code,Generate image, Data &amp; More!</p>
+              <h1 className="text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-bold">AKM BOT</h1>
+              <p className="text-sm text-gray-600">Advanced AI Assistant - Developed by AKM | File Analysis • Image Generation • Voice Interaction</p>
             </div>
             <div className="ml-auto flex gap-2">
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                Powered by AKM
+              </Badge>
               <Badge variant="secondary" className="bg-green-100 text-green-700">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                All Files Supported
+                All Features Active
               </Badge>
             </div>
           </div>
@@ -548,7 +563,7 @@ Please analyze this file based on its type and provide relevant insights about i
           <ScrollArea className="flex-1 mb-6">
             <div className="space-y-6">
               {messages.map(message => <div key={message.id} className={`flex gap-4 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {message.type === 'assistant' && <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                  {message.type === 'assistant' && <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                       <Bot className="w-4 h-4 text-white" />
                     </div>}
                   
@@ -561,7 +576,7 @@ Please analyze this file based on its type and provide relevant insights about i
                       {/* Display generated images */}
                       {message.generatedImage && <div className="mt-3">
                           <img src={message.generatedImage.url} alt={message.generatedImage.prompt} className="max-w-full rounded-lg shadow-md" />
-                          <p className="text-xs text-gray-600 mt-2">Generated from: "{message.generatedImage.prompt}"</p>
+                          <p className="text-xs text-gray-600 mt-2">Generated by AKM BOT from: "{message.generatedImage.prompt}"</p>
                         </div>}
                       
                       {/* Enhanced attachments display */}
@@ -600,23 +615,23 @@ Please analyze this file based on its type and provide relevant insights about i
                 </div>)}
               
               {(isLoading || isGeneratingImage) && <div className="flex gap-4 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-white" />
                   </div>
                   <Card className="bg-white shadow-md">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{
                         animationDelay: '0.1s'
                       }}></div>
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{
                         animationDelay: '0.2s'
                       }}></div>
                         </div>
                         <span className="text-sm text-gray-600">
-                          {isGeneratingImage ? 'Generating image with Gemini...' : 'Analyzing your files...'}
+                          {isGeneratingImage ? 'AKM BOT is generating your image...' : 'AKM BOT is analyzing your request...'}
                         </span>
                       </div>
                     </CardContent>
@@ -631,6 +646,10 @@ Please analyze this file based on its type and provide relevant insights about i
             <CardContent className="p-4">
               {/* Enhanced Feature Pills */}
               <div className="flex flex-wrap gap-2 mb-4">
+                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200">
+                  <Palette className="w-3 h-3 mr-1" />
+                  AI Image Generation
+                </Badge>
                 <Badge variant="outline" className="text-xs">
                   <FileText className="w-3 h-3 mr-1" />
                   PDF & Documents
@@ -648,6 +667,10 @@ Please analyze this file based on its type and provide relevant insights about i
                   Images & Media
                 </Badge>
                 <Badge variant="outline" className="text-xs">
+                  <Mic className="w-3 h-3 mr-1" />
+                  Voice Input
+                </Badge>
+                <Badge variant="outline" className="text-xs">
                   <Archive className="w-3 h-3 mr-1" />
                   Archives
                 </Badge>
@@ -662,7 +685,7 @@ Please analyze this file based on its type and provide relevant insights about i
               {/* Enhanced Attached Files Preview */}
               {attachedFiles.length > 0 && <div className="mb-4">
                   <div className="flex flex-wrap gap-2">
-                    {attachedFiles.map((file, index) => <div key={index} className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-2 rounded-lg text-sm">
+                    {attachedFiles.map((file, index) => <div key={index} className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-2 rounded-lg text-sm">
                         {getFileIcon(file.name, file.file?.type || '')}
                         <div className="flex flex-col">
                           <span className="truncate max-w-32 font-medium">{file.name}</span>
@@ -670,7 +693,7 @@ Please analyze this file based on its type and provide relevant insights about i
                               {file.fileSize < 1024 ? `${file.fileSize} bytes` : file.fileSize < 1024 * 1024 ? `${(file.fileSize / 1024).toFixed(1)} KB` : `${(file.fileSize / 1024 / 1024).toFixed(1)} MB`}
                             </span>}
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeAttachment(index)} className="h-4 w-4 p-0 hover:bg-blue-200">
+                        <Button variant="ghost" size="sm" onClick={() => removeAttachment(index)} className="h-4 w-4 p-0 hover:bg-purple-200">
                           <X className="w-3 h-3" />
                         </Button>
                       </div>)}
@@ -689,18 +712,18 @@ Please analyze this file based on its type and provide relevant insights about i
                   <Button variant="outline" size="sm" onClick={() => handleFileUpload('file')} className="p-2 bg-green-50 text-green-600 hover:bg-green-100" title="Upload ANY File Type">
                     <File className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100" title="Generate Images">
+                  <Button variant="outline" size="sm" className="p-2 bg-purple-50 text-purple-600 hover:bg-purple-100" title="Generate Images with AI">
                     <Palette className="w-4 h-4" />
                   </Button>
                 </div>
 
                 {/* Text Input */}
                 <div className="flex-1 relative">
-                  <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder={voiceRecording.isRecording ? "Listening..." : "Upload any file type for AI analysis or ask questions!"} className="pr-12 min-h-[2.5rem] resize-none" disabled={isLoading || voiceRecording.isRecording || isGeneratingImage} />
+                  <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder={voiceRecording.isRecording ? "AKM BOT is listening..." : "Ask anything, upload files, or request image generation - AKM BOT can handle it all!"} className="pr-12 min-h-[2.5rem] resize-none" disabled={isLoading || voiceRecording.isRecording || isGeneratingImage} />
                 </div>
 
                 {/* Send Button */}
-                <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim() && attachedFiles.length === 0 || voiceRecording.isRecording || isGeneratingImage} className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+                <Button onClick={handleSendMessage} disabled={isLoading || !inputValue.trim() && attachedFiles.length === 0 || voiceRecording.isRecording || isGeneratingImage} className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -730,4 +753,5 @@ Please analyze this file based on its type and provide relevant insights about i
       </div>
     </div>;
 };
+
 export default Index;
