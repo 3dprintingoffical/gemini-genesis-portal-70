@@ -142,7 +142,7 @@ const Index = () => {
       const requestBody = {
         contents: [{
           parts: [{
-            text: `Generate an image: ${enhancedPrompt}`
+            text: enhancedPrompt
           }]
         }],
         generationConfig: {
@@ -154,7 +154,7 @@ const Index = () => {
         }
       };
       
-      console.log('Request body:', requestBody);
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
       
       // Use the correct model for image generation
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`, {
@@ -185,26 +185,39 @@ const Index = () => {
       }
 
       const data = JSON.parse(responseText);
-      console.log('Success response:', data);
+      console.log('Success response structure:', JSON.stringify(data, null, 2));
       
       // Look for image data in the response
       if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
         const parts = data.candidates[0].content.parts;
+        console.log('Found parts in response:', parts.length);
         
-        for (const part of parts) {
-          if (part.inline_data && part.inline_data.data) {
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          console.log(`Part ${i}:`, JSON.stringify(part, null, 2));
+          
+          // Check different possible property names for image data
+          if (part.inline_data?.data || part.inlineData?.data) {
             console.log('Found image data in response');
-            // Create a data URL from the base64 image data
-            const mimeType = part.inline_data.mime_type || 'image/png';
-            const imageUrl = `data:${mimeType};base64,${part.inline_data.data}`;
-            console.log('Image URL created:', imageUrl.substring(0, 100) + '...');
+            const imageData = part.inline_data || part.inlineData;
+            const mimeType = imageData.mime_type || imageData.mimeType || 'image/png';
+            const imageUrl = `data:${mimeType};base64,${imageData.data}`;
+            console.log('Image URL created successfully');
+            return imageUrl;
+          }
+          
+          // Also check for other possible structures
+          if (part.image?.data) {
+            console.log('Found image data in part.image');
+            const mimeType = part.image.mime_type || 'image/png';
+            const imageUrl = `data:${mimeType};base64,${part.image.data}`;
             return imageUrl;
           }
         }
         
-        // If no image found, throw an error
-        console.error('No image data found in response parts:', parts);
-        throw new Error('No image data found in Gemini response. Image generation may not be available for this model.');
+        // If no image found, provide more detailed error
+        console.error('No image data found in response parts. Parts structure:', parts);
+        throw new Error('The model returned a response but no image was generated. This might be due to content restrictions or the model not supporting image generation for this specific prompt.');
       } else {
         console.error('Unexpected response structure:', data);
         throw new Error('Unexpected response structure from Gemini API');
@@ -380,7 +393,7 @@ const Index = () => {
         console.log('Starting image generation with Gemini...');
         // Generate image with Gemini
         const imageUrl = await generateImageWithGemini(inputValue);
-        console.log('Image generated successfully:', imageUrl.substring(0, 100) + '...');
+        console.log('Image generated successfully');
         
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
