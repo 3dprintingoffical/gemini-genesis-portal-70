@@ -264,19 +264,22 @@ const Index = () => {
   };
   const filterFormattingFromText = (text: string): string => {
     return text
-    // Remove markdown-style asterisks for bold/emphasis
-    .replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')
-    // Remove bullet points with asterisks
-    .replace(/^\s*\*\s+/gm, '')
-    // Remove multiple asterisks used as dividers
-    .replace(/\*{3,}/g, '')
-    // Clean up extra whitespace that might result from filtering
-    .replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+      // Remove markdown-style asterisks for bold/emphasis
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      // Remove bullet points with asterisks
+      .replace(/^\s*\*\s+/gm, '')
+      // Remove multiple asterisks used as dividers
+      .replace(/\*{3,}/g, '')
+      // Clean up extra whitespace that might result from filtering
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim();
   };
   const generateResponse = async (userMessage: string, attachments?: any[]) => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
     try {
       let prompt = userMessage;
+      const parts: any[] = []; // Fix: Declare the parts array
 
       // Handle developer/creator questions
       if (userMessage.toLowerCase().includes('developer') || 
@@ -305,6 +308,7 @@ const Index = () => {
           // Add file structure analysis to prompt
           const fileAnalysis = analyzeFileStructure(attachment.file);
           prompt += `\n\n${fileAnalysis}\n`;
+          
           if (attachment.type === 'image' && attachment.file) {
             try {
               console.log('Converting image to base64...');
@@ -331,36 +335,17 @@ const Index = () => {
               const lines = fileContent.split('\n').length;
               const words = fileContent.split(/\s+/).length;
               const chars = fileContent.length;
-              prompt += `\n\n📝 **Content Analysis:**
-• **Lines:** ${lines}
-• **Words:** ${words}
-• **Characters:** ${chars}
-
-**File Content:**
-\`\`\`
-${fileContent.length > 10000 ? fileContent.substring(0, 10000) + '\n... (content truncated)' : fileContent}
-\`\`\`
-
-Please analyze this file content comprehensively. If it's code, explain its functionality. If it's data, analyze patterns. If it's documentation, summarize key points.`;
+              prompt += `\n\n📝 **Content Analysis:**\n• **Lines:** ${lines}\n• **Words:** ${words}\n• **Characters:** ${chars}\n\n**File Content:**\n\`\`\`\n${fileContent.length > 10000 ? fileContent.substring(0, 10000) + '\n... (content truncated)' : fileContent}\n\`\`\`\n\nPlease analyze this file content comprehensively. If it's code, explain its functionality. If it's data, analyze patterns. If it's documentation, summarize key points.`;
             } catch (error) {
               console.error('Error reading text file:', error);
               prompt += `\n\n⚠️ Could not read text content from ${attachment.name}. Please provide analysis based on file metadata.`;
             }
           } else if (attachment.file && isBinaryFile(attachment.file)) {
             // For binary files, provide detailed metadata analysis
-            prompt += `\n\n🔍 **Binary File Detected:** ${attachment.name}
-This appears to be a binary file format. Based on the file extension and MIME type, please provide:
-• Expected file structure and format
-• Common use cases and applications
-• Possible content analysis approaches
-• Recommendations for further processing`;
+            prompt += `\n\n🔍 **Binary File Detected:** ${attachment.name}\nThis appears to be a binary file format. Based on the file extension and MIME type, please provide:\n• Expected file structure and format\n• Common use cases and applications\n• Possible content analysis approaches\n• Recommendations for further processing`;
           } else if (attachment.file) {
             // For any other file types
-            prompt += `\n\n📎 **File Upload:** ${attachment.name}
-• **MIME Type:** ${attachment.file.type}
-• **Category:** ${attachment.file.type.startsWith('audio/') ? 'Audio' : attachment.file.type.startsWith('video/') ? 'Video' : attachment.file.type.startsWith('application/') ? 'Application' : 'Other'}
-
-Please analyze this file based on its type and provide relevant insights about its likely content and structure.`;
+            prompt += `\n\n📎 **File Upload:** ${attachment.name}\n• **MIME Type:** ${attachment.file.type}\n• **Category:** ${attachment.file.type.startsWith('audio/') ? 'Audio' : attachment.file.type.startsWith('video/') ? 'Video' : attachment.file.type.startsWith('application/') ? 'Application' : 'Other'}\n\nPlease analyze this file based on its type and provide relevant insights about its likely content and structure.`;
           }
         }
       }
@@ -369,8 +354,10 @@ Please analyze this file based on its type and provide relevant insights about i
       parts.push({
         text: prompt
       });
+
       console.log('Final prompt:', prompt);
       console.log('Total parts in request:', parts.length);
+
       const requestBody = {
         contents: [{
           parts: parts
@@ -379,9 +366,10 @@ Please analyze this file based on its type and provide relevant insights about i
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048 // Increased for more detailed analysis
+          maxOutputTokens: 2048
         }
       };
+
       console.log('Sending request to Gemini API...');
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -390,14 +378,17 @@ Please analyze this file based on its type and provide relevant insights about i
         },
         body: JSON.stringify(requestBody)
       });
+
       console.log('Response status:', response.status);
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Gemini API Error Details:', errorData);
         throw new Error(`Failed to get response from Gemini AI: ${errorData.error?.message || 'Unknown error'}`);
       }
+
       const data = await response.json();
       console.log('Gemini API response received');
+
       if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
         const rawText = data.candidates[0].content.parts[0].text;
         // Apply filtering to remove asterisks and formatting
