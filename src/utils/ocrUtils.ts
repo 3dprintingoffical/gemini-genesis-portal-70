@@ -46,11 +46,11 @@ export const extractTextFromImage = async (
     return {
       text: result.data.text,
       confidence: result.data.confidence,
-      words: result.data.words.map(word => ({
+      words: result.data.words?.map(word => ({
         text: word.text,
         confidence: word.confidence,
         bbox: word.bbox
-      }))
+      })) || []
     };
   } catch (error) {
     console.error('OCR Error:', error);

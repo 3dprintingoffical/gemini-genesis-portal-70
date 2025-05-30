@@ -81,6 +81,7 @@ const Index = () => {
       });
     }
   });
+  const textToSpeech = useTextToSpeech();
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
