@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database, Plus } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database, Plus, Globe, Lightbulb, Brain, PenTool } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
 
@@ -47,6 +48,7 @@ const Index = () => {
     fileSize?: number;
   }[]>([]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -286,12 +288,21 @@ const Index = () => {
         prompt = `I was developed by AKM, a talented developer who created me to be your comprehensive AI assistant. AKM designed me with advanced capabilities including file analysis, image generation, voice interaction, and intelligent conversation. ${userMessage}`;
       }
 
-      // Enhanced prompt based on user intent
-      if (userMessage.toLowerCase().includes('search') || userMessage.toLowerCase().includes('latest')) {
+      // Enhanced prompt based on user intent and selected feature
+      if (selectedFeature === 'search' || userMessage.toLowerCase().includes('search') || userMessage.toLowerCase().includes('latest')) {
         prompt = `Please search for recent information about: ${userMessage}. Provide current, accurate details.`;
       }
-      if (userMessage.toLowerCase().includes('generate image') || userMessage.toLowerCase().includes('create image')) {
+      if (selectedFeature === 'image' || userMessage.toLowerCase().includes('generate image') || userMessage.toLowerCase().includes('create image')) {
         prompt = `I understand you want to generate an image. Here's a detailed description for image generation: ${userMessage}. While I can't directly generate images, I can provide detailed prompts for image generation tools.`;
+      }
+      if (selectedFeature === 'code') {
+        prompt = `Please help with coding: ${userMessage}. Provide detailed code examples and explanations.`;
+      }
+      if (selectedFeature === 'research') {
+        prompt = `Please conduct deep research on: ${userMessage}. Provide comprehensive analysis with multiple perspectives.`;
+      }
+      if (selectedFeature === 'thinking') {
+        prompt = `Let me think deeply about this: ${userMessage}. I'll provide a thorough, well-reasoned response.`;
       }
 
       // Enhanced file processing for ALL file types
@@ -398,11 +409,22 @@ const Index = () => {
       throw error;
     }
   };
+
+  // Feature selection handler
+  const handleFeatureSelect = (feature: string, prompt: string) => {
+    setSelectedFeature(feature);
+    setInputValue(prompt);
+    toast({
+      title: "Feature selected",
+      description: `${feature} mode activated`
+    });
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() && attachedFiles.length === 0) return;
 
     // Check if this is an image generation request
-    const isImageGenRequest = inputValue.toLowerCase().includes('generate image') || inputValue.toLowerCase().includes('create image') || inputValue.toLowerCase().includes('draw') || inputValue.toLowerCase().includes('make image') || inputValue.toLowerCase().includes('paint') || inputValue.toLowerCase().includes('design');
+    const isImageGenRequest = selectedFeature === 'image' || inputValue.toLowerCase().includes('generate image') || inputValue.toLowerCase().includes('create image') || inputValue.toLowerCase().includes('draw') || inputValue.toLowerCase().includes('make image') || inputValue.toLowerCase().includes('paint') || inputValue.toLowerCase().includes('design');
     console.log('Input value:', inputValue);
     console.log('Is image generation request:', isImageGenRequest);
     const userMessage: Message = {
@@ -416,6 +438,7 @@ const Index = () => {
     setInputValue('');
     const currentAttachments = [...attachedFiles];
     setAttachedFiles([]);
+    setSelectedFeature(null);
     setIsLoading(true);
     try {
       if (isImageGenRequest) {
@@ -660,7 +683,7 @@ const Index = () => {
           </ScrollArea>
         </div>
 
-        {/* Input Area - Modern Dark Design */}
+        {/* Input Area - Enhanced with ChatGPT-style features */}
         <div className="border-t border-gray-700 bg-gray-800/50 backdrop-blur-sm">
           <div className="max-w-4xl mx-auto px-4 py-4">
             {/* Enhanced Attached Files Preview */}
@@ -695,17 +718,58 @@ const Index = () => {
             )}
 
             <div className="flex gap-3 items-end">
-              {/* Action Buttons */}
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-all duration-200" 
-                  title="Add attachment"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
+              {/* Enhanced Tools Dropdown - ChatGPT Style */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-all duration-200" 
+                    title="Tools"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-gray-800 border-gray-700" side="top" align="start">
+                  <DropdownMenuItem 
+                    onClick={() => handleFeatureSelect('image', 'Create an image of ')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Palette className="w-4 h-4 mr-2" />
+                    Create an image
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleFeatureSelect('search', 'Search the web for ')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Globe className="w-4 h-4 mr-2" />
+                    Search the web
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleFeatureSelect('code', 'Write or code ')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <PenTool className="w-4 h-4 mr-2" />
+                    Write or code
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem 
+                    onClick={() => handleFeatureSelect('research', 'Run deep research on ')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Run deep research
+                    <span className="ml-auto text-xs text-gray-400">5 left</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleFeatureSelect('thinking', 'Think for longer about ')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Brain className="w-4 h-4 mr-2" />
+                    Think for longer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Main Input */}
               <div className="flex-1 relative">
@@ -714,7 +778,7 @@ const Index = () => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={voiceRecording.isRecording ? "Listening..." : "Ask anything..."}
+                    placeholder={voiceRecording.isRecording ? "Listening..." : selectedFeature ? `${selectedFeature} mode active...` : "Ask anything..."}
                     className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 pr-20 min-h-[48px] rounded-xl focus:border-purple-500/50 focus:ring-purple-500/20 transition-all duration-200"
                     disabled={isLoading || voiceRecording.isRecording || isGeneratingImage}
                   />
@@ -769,15 +833,27 @@ const Index = () => {
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-2 mt-3">
-              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+              <Badge 
+                variant="outline" 
+                className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200"
+                onClick={() => handleFeatureSelect('image', 'Create an image of a ')}
+              >
                 <Palette className="w-3 h-3 mr-1" />
                 Create an image
               </Badge>
-              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+              <Badge 
+                variant="outline" 
+                className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200"
+                onClick={() => handleFeatureSelect('search', 'Search the web for ')}
+              >
                 <Search className="w-3 h-3 mr-1" />
                 Search the web
               </Badge>
-              <Badge variant="outline" className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200">
+              <Badge 
+                variant="outline" 
+                className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200"
+                onClick={() => handleFeatureSelect('code', 'Write code for ')}
+              >
                 <Code className="w-3 h-3 mr-1" />
                 Write or code
               </Badge>
