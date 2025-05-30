@@ -6,11 +6,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database, Plus, Globe, Lightbulb, Brain, PenTool } from 'lucide-react';
+import { MessageCircle, Send, Image as ImageIcon, Mic, File, Search, Bot, User, Sparkles, Camera, Download, Copy, Volume2, X, Palette, FileText, FileSpreadsheet, FileImage, FileVideo, FileAudio, Archive, Code, Database, Plus, Globe, Lightbulb, Brain, PenTool, History, Trash2, VolumeX, ScanText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useVoiceRecording } from '@/hooks/useVoiceRecording';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { enhancedWebSearch } from '@/utils/webSearch';
+import { saveChatSession, getChatHistory, loadChatSession, deleteChatSession, clearChatHistory, type ChatSession } from '@/utils/chatHistory';
+import { extractTextFromImage, canPerformOCR, isImageFile } from '@/utils/ocrUtils';
 
-interface Message {
+export interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
@@ -27,13 +31,15 @@ interface Message {
     url: string;
     prompt: string;
   };
+  searchResults?: any;
+  ocrResults?: any;
 }
 
 const Index = () => {
   const [messages, setMessages] = useState<Message[]>([{
     id: '1',
     type: 'assistant',
-    content: 'Hello! I\'m AKM BOT, your advanced AI assistant developed by AKM and powered by Gemini AI. I\'m equipped with comprehensive capabilities to handle virtually any task:\n\n🎨 AI IMAGE GENERATION\n• Create stunning images from text descriptions\n• Generate artwork, designs, and visual content\n• Multiple art styles and formats supported\n\n📄 UNIVERSAL FILE ANALYSIS\n• Documents (PDF, DOC, DOCX, TXT, MD, RTF)\n• Spreadsheets (XLS, XLSX, CSV, ODS)\n• Images (JPG, PNG, GIF, SVG, WEBP, BMP)\n• Audio files (MP3, WAV, OGG, FLAC, AAC)\n• Video files (MP4, AVI, MOV, WMV, MKV)\n• Code files (JS, TS, PY, JAVA, CPP, HTML, CSS)\n• Archives (ZIP, RAR, 7Z, TAR, GZ)\n• Data files (JSON, XML, SQL, YAML, CSV)\n\n🎤 VOICE INTERACTION\n• Voice-to-text transcription\n• Natural speech processing\n• Hands-free communication\n\n🔍 INTELLIGENT SEARCH\n• Real-time information retrieval\n• Context-aware responses\n• Latest data and insights\n\n💬 ADVANCED CHAT\n• Natural language understanding\n• Context retention\n• Multi-turn conversations\n\nDeveloped by AKM - Bringing you cutting-edge AI technology for all your digital needs. Upload any file, ask questions, or request image generation - I\'m here to help!',
+    content: 'Hello! I\'m AKM BOT, your advanced AI assistant developed by AKM and powered by Gemini AI. I\'m equipped with comprehensive capabilities to handle virtually any task:\n\n🎨 AI IMAGE GENERATION\n• Create stunning images from text descriptions\n• Generate artwork, designs, and visual content\n• Multiple art styles and formats supported\n\n📄 UNIVERSAL FILE ANALYSIS\n• Documents (PDF, DOC, DOCX, TXT, MD, RTF)\n• Spreadsheets (XLS, XLSX, CSV, ODS)\n• Images (JPG, PNG, GIF, SVG, WEBP, BMP)\n• Audio files (MP3, WAV, OGG, FLAC, AAC)\n• Video files (MP4, AVI, MOV, WMV, MKV)\n• Code files (JS, TS, PY, JAVA, CPP, HTML, CSS)\n• Archives (ZIP, RAR, 7Z, TAR, GZ)\n• Data files (JSON, XML, SQL, YAML, CSV)\n\n🎤 VOICE INTERACTION\n• Voice-to-text transcription\n• Natural speech processing\n• Hands-free communication\n\n🔍 INTELLIGENT SEARCH\n• Real-time information retrieval\n• Context-aware responses\n• Latest data and insights\n\n💬 ADVANCED CHAT\n• Natural language understanding\n• Context retention\n• Multi-turn conversations\n\n🗣️ TEXT-TO-SPEECH\n• AI response narration\n• Multiple voice options\n• Accessibility support\n\n💾 CHAT HISTORY\n• Save and restore conversations\n• Search through past chats\n• Export conversations\n\n📖 OCR CAPABILITIES\n• Extract text from images\n• Document digitization\n• Handwriting recognition\n\nDeveloped by AKM - Bringing you cutting-edge AI technology for all your digital needs. Upload any file, ask questions, or request image generation - I\'m here to help!',
     timestamp: new Date()
   }]);
   const [inputValue, setInputValue] = useState('');
@@ -49,6 +55,10 @@ const Index = () => {
   }[]>([]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isPerformingOCR, setIsPerformingOCR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -276,7 +286,14 @@ const Index = () => {
     const GEMINI_API_KEY = 'AIzaSyDBMWX5dw8D2H18KG3Er8aieov_A7i2TIY';
     try {
       let prompt = userMessage;
-      const parts: any[] = []; // Fix: Declare the parts array
+      const parts: any[] = [];
+
+      // Handle web search requests
+      if (selectedFeature === 'search' || userMessage.toLowerCase().includes('search') || userMessage.toLowerCase().includes('latest')) {
+        console.log('Performing web search...');
+        const searchResults = await enhancedWebSearch(userMessage);
+        return searchResults;
+      }
 
       // Handle developer/creator questions
       if (userMessage.toLowerCase().includes('developer') || 
@@ -289,9 +306,6 @@ const Index = () => {
       }
 
       // Enhanced prompt based on user intent and selected feature
-      if (selectedFeature === 'search' || userMessage.toLowerCase().includes('search') || userMessage.toLowerCase().includes('latest')) {
-        prompt = `Please search for recent information about: ${userMessage}. Provide current, accurate details.`;
-      }
       if (selectedFeature === 'image' || userMessage.toLowerCase().includes('generate image') || userMessage.toLowerCase().includes('create image')) {
         prompt = `I understand you want to generate an image. Here's a detailed description for image generation: ${userMessage}. While I can't directly generate images, I can provide detailed prompts for image generation tools.`;
       }
@@ -305,7 +319,7 @@ const Index = () => {
         prompt = `Let me think deeply about this: ${userMessage}. I'll provide a thorough, well-reasoned response.`;
       }
 
-      // Enhanced file processing for ALL file types
+      // Enhanced file processing with OCR support
       if (attachments && attachments.length > 0) {
         console.log('Processing attachments:', attachments.length);
         for (const attachment of attachments) {
@@ -326,6 +340,27 @@ const Index = () => {
                   data: base64Image
                 }
               });
+
+              // Perform OCR if image contains text
+              if (canPerformOCR(attachment.file)) {
+                try {
+                  console.log('Performing OCR on image...');
+                  setIsPerformingOCR(true);
+                  const ocrResult = await extractTextFromImage(attachment.file, {
+                    onProgress: (progress) => console.log('OCR Progress:', progress)
+                  });
+                  
+                  if (ocrResult.text.trim()) {
+                    prompt += `\n\n📖 OCR TEXT EXTRACTED FROM IMAGE:\n\`\`\`\n${ocrResult.text}\n\`\`\`\n\nOCR Confidence: ${ocrResult.confidence.toFixed(2)}%\n\nPlease analyze both the visual content and the extracted text.`;
+                  }
+                } catch (ocrError) {
+                  console.error('OCR Error:', ocrError);
+                  prompt += `\n\n⚠️ OCR attempted but failed to extract text from image.`;
+                } finally {
+                  setIsPerformingOCR(false);
+                }
+              }
+
               prompt = `Please analyze this uploaded image in detail and ${prompt}`;
             } catch (error) {
               console.error('Error processing image:', error);
@@ -408,6 +443,48 @@ const Index = () => {
       console.error('Error calling Gemini AI:', error);
       throw error;
     }
+  };
+
+  // New: Chat history functions
+  const loadChat = (sessionId: string) => {
+    const sessionMessages = loadChatSession(sessionId);
+    if (sessionMessages) {
+      setMessages(sessionMessages);
+      setCurrentSessionId(sessionId);
+      setShowChatHistory(false);
+      toast({
+        title: "Chat loaded",
+        description: "Previous conversation restored"
+      });
+    }
+  };
+
+  const startNewChat = () => {
+    setMessages([{
+      id: '1',
+      type: 'assistant',
+      content: 'Hello! I\'m AKM BOT, your advanced AI assistant. How can I help you today?',
+      timestamp: new Date()
+    }]);
+    setCurrentSessionId(null);
+    setShowChatHistory(false);
+    toast({
+      title: "New chat started",
+      description: "Ready for a fresh conversation"
+    });
+  };
+
+  const deleteChat = (sessionId: string) => {
+    deleteChatSession(sessionId);
+    const updatedHistory = getChatHistory();
+    setChatHistory(updatedHistory);
+    if (currentSessionId === sessionId) {
+      startNewChat();
+    }
+    toast({
+      title: "Chat deleted",
+      description: "Conversation removed from history"
+    });
   };
 
   // Feature selection handler
@@ -557,6 +634,15 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowChatHistory(!showChatHistory)}
+                  className="text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                  title="Chat History"
+                >
+                  <History className="w-4 h-4" />
+                </Button>
                 <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
                   Online
@@ -565,6 +651,76 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Chat History Sidebar */}
+        {showChatHistory && (
+          <div className="absolute top-16 right-4 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 max-h-96 overflow-hidden">
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-200">Chat History</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startNewChat}
+                    className="text-gray-400 hover:text-gray-200 h-6 w-6 p-0"
+                    title="New Chat"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowChatHistory(false)}
+                    className="text-gray-400 hover:text-gray-200 h-6 w-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <ScrollArea className="max-h-80">
+              <div className="p-2">
+                {chatHistory.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No chat history yet</p>
+                ) : (
+                  chatHistory.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                        currentSessionId === session.id
+                          ? 'bg-purple-600/20 border border-purple-500/30'
+                          : 'hover:bg-gray-700/50'
+                      }`}
+                      onClick={() => loadChat(session.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-200 truncate">{session.title}</p>
+                          <p className="text-xs text-gray-400">
+                            {session.updatedAt.toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChat(session.id);
+                          }}
+                          className="text-gray-400 hover:text-red-400 h-6 w-6 p-0"
+                          title="Delete Chat"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
 
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden">
@@ -638,13 +794,29 @@ const Index = () => {
                             <Copy className="w-3 h-3" />
                           </Button>
                           {message.type === 'assistant' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
-                            >
-                              <Volume2 className="w-3 h-3" />
-                            </Button>
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => textToSpeech.speak(message.content)}
+                                disabled={!textToSpeech.isSupported}
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                                title="Read aloud"
+                              >
+                                {textToSpeech.isSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                              </Button>
+                              {textToSpeech.isSpeaking && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={textToSpeech.stop}
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                                  title="Stop reading"
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -658,7 +830,7 @@ const Index = () => {
                   </div>
                 ))}
                 
-                {(isLoading || isGeneratingImage) && (
+                {(isLoading || isGeneratingImage || isPerformingOCR) && (
                   <div className="flex gap-4 justify-start animate-fade-in">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center animate-pulse">
                       <Bot className="w-4 h-4 text-white" />
@@ -671,7 +843,9 @@ const Index = () => {
                           <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                         <span className="text-sm text-gray-400">
-                          {isGeneratingImage ? 'Generating your image...' : 'Thinking...'}
+                          {isGeneratingImage ? 'Generating your image...' : 
+                           isPerformingOCR ? 'Extracting text from image...' : 
+                           'Thinking...'}
                         </span>
                       </div>
                     </div>
@@ -683,7 +857,7 @@ const Index = () => {
           </ScrollArea>
         </div>
 
-        {/* Input Area - Enhanced with ChatGPT-style features */}
+        {/* Input Area - Enhanced with new features */}
         <div className="border-t border-gray-700 bg-gray-800/50 backdrop-blur-sm">
           <div className="max-w-4xl mx-auto px-4 py-4">
             {/* Enhanced Attached Files Preview */}
@@ -768,6 +942,14 @@ const Index = () => {
                     <Brain className="w-4 h-4 mr-2" />
                     Think for longer
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-gray-700" />
+                  <DropdownMenuItem 
+                    onClick={() => handleFileUpload('image')}
+                    className="text-gray-200 hover:bg-gray-700 cursor-pointer"
+                  >
+                    <ScanText className="w-4 h-4 mr-2" />
+                    Upload for OCR
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -780,7 +962,7 @@ const Index = () => {
                     onKeyPress={handleKeyPress}
                     placeholder={voiceRecording.isRecording ? "Listening..." : selectedFeature ? `${selectedFeature} mode active...` : "Ask anything..."}
                     className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 pr-20 min-h-[48px] rounded-xl focus:border-purple-500/50 focus:ring-purple-500/20 transition-all duration-200"
-                    disabled={isLoading || voiceRecording.isRecording || isGeneratingImage}
+                    disabled={isLoading || voiceRecording.isRecording || isGeneratingImage || isPerformingOCR}
                   />
                   
                   {/* Inline Action Buttons */}
@@ -824,7 +1006,7 @@ const Index = () => {
               {/* Send Button */}
               <Button 
                 onClick={handleSendMessage} 
-                disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording || isGeneratingImage} 
+                disabled={isLoading || (!inputValue.trim() && attachedFiles.length === 0) || voiceRecording.isRecording || isGeneratingImage || isPerformingOCR} 
                 className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white p-3 rounded-xl transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
               >
                 <Send className="w-4 h-4" />
@@ -856,6 +1038,14 @@ const Index = () => {
               >
                 <Code className="w-3 h-3 mr-1" />
                 Write or code
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className="text-xs bg-gray-800/50 border-gray-600/50 text-gray-400 hover:bg-gray-700/50 cursor-pointer transition-all duration-200"
+                onClick={() => handleFileUpload('image')}
+              >
+                <ScanText className="w-3 h-3 mr-1" />
+                Extract text (OCR)
               </Badge>
             </div>
 
